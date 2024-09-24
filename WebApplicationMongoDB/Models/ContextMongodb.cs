@@ -30,7 +30,7 @@ namespace WebApplicationMongoDB.Models
                 throw new Exception("Não foi possível estabelecer uma conexão com o banco de dados");
             }
         }
-        public IMongoCollection<Usuario> Usuarios {
+        public IMongoCollection<Usuario> Usuario {
             get
             {
                 return _database.GetCollection<Usuario>("Usuario");

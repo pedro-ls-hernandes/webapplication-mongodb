@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using WebApplicationMongoDB.Data;
 using WebApplicationMongoDB.Models;
 
@@ -12,17 +13,12 @@ namespace WebApplicationMongoDB.Controllers
 {
     public class UsuariosController : Controller
     {
-        private readonly WebApplicationMongoDBContext _context;
-
-        public UsuariosController(WebApplicationMongoDBContext context)
-        {
-            _context = context;
-        }
-
+      
         // GET: Usuarios
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Usuario.ToListAsync());
+            ContextMongodb contextMongodb = new ContextMongodb();
+            return View(await contextMongodb.Usuario.Find(u=>true).ToListAsync());
         }
 
         // GET: Usuarios/Details/5
@@ -33,8 +29,10 @@ namespace WebApplicationMongoDB.Controllers
                 return NotFound();
             }
 
-            var usuario = await _context.Usuario
-                .FirstOrDefaultAsync(m => m.Id == id);
+            ContextMongodb contextMongodb = new ContextMongodb();
+            //compara o id recebido com o id do banco
+            //se encontrar, tras o primeiro ou então um valor defaut
+            var usuario = await contextMongodb.Usuario.Find(m => m.Id == id).FirstOrDefaultAsync(); 
             if (usuario == null)
             {
                 return NotFound();
@@ -58,9 +56,9 @@ namespace WebApplicationMongoDB.Controllers
         {
             if (ModelState.IsValid)
             {
+                ContextMongodb contextMongodb = new ContextMongodb();
                 usuario.Id = Guid.NewGuid();
-                _context.Add(usuario);
-                await _context.SaveChangesAsync();
+                await contextMongodb.Usuario.InsertOneAsync(usuario);
                 return RedirectToAction(nameof(Index));
             }
             return View(usuario);
@@ -74,7 +72,8 @@ namespace WebApplicationMongoDB.Controllers
                 return NotFound();
             }
 
-            var usuario = await _context.Usuario.FindAsync(id);
+            ContextMongodb contextMongodb = new ContextMongodb();
+            var usuario = await contextMongodb.Usuario.Find(u=>u.Id == id).FirstOrDefaultAsync();
             if (usuario == null)
             {
                 return NotFound();
@@ -98,8 +97,9 @@ namespace WebApplicationMongoDB.Controllers
             {
                 try
                 {
-                    _context.Update(usuario);
-                    await _context.SaveChangesAsync();
+                    ContextMongodb contextMongodb = new ContextMongodb();
+                    //trocando o conteúdo do usuario desejado
+                    await contextMongodb.Usuario.ReplaceOneAsync(u => u.Id == usuario.Id, usuario);
                 }
                 catch (DbUpdateConcurrencyException)
                 {
@@ -125,8 +125,8 @@ namespace WebApplicationMongoDB.Controllers
                 return NotFound();
             }
 
-            var usuario = await _context.Usuario
-                .FirstOrDefaultAsync(m => m.Id == id);
+            ContextMongodb contextMongodb = new ContextMongodb();
+            var usuario = await contextMongodb.Usuario.Find(m => m.Id == id).FirstOrDefaultAsync();
             if (usuario == null)
             {
                 return NotFound();
@@ -140,19 +140,15 @@ namespace WebApplicationMongoDB.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(Guid id)
         {
-            var usuario = await _context.Usuario.FindAsync(id);
-            if (usuario != null)
-            {
-                _context.Usuario.Remove(usuario);
-            }
-
-            await _context.SaveChangesAsync();
+            ContextMongodb contextMongodb = new ContextMongodb();
+            await contextMongodb.Usuario.DeleteOneAsync(m => m.Id == id);
             return RedirectToAction(nameof(Index));
         }
 
         private bool UsuarioExists(Guid id)
         {
-            return _context.Usuario.Any(e => e.Id == id);
+            ContextMongodb contextMongodb = new ContextMongodb();
+            return contextMongodb.Usuario.Find(e => e.Id == id).Any();
         }
     }
 }
